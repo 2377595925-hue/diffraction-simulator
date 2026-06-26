@@ -1,16 +1,16 @@
 name: 🪟 打包 Windows 版 (PyInstaller)
 
 on:
-  workflow_dispatch:  # 手动触发
+  workflow_dispatch:
   push:
     tags:
-      - 'v*'         # 推送版本标签时自动触发
+      - 'v*'
 
 jobs:
   build:
     runs-on: windows-latest
     permissions:
-      contents: write    # 允许创建 Release
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -26,28 +26,36 @@ jobs:
           python -m pip install --upgrade pip
           pip install flask numpy scipy pillow pyinstaller
 
-      - name: 🔍 调试：查看文件结构
+      - name: 📁 准备 static 目录（文件实际在根目录）
         shell: pwsh
         run: |
-          Write-Output "工作目录: $(Get-Location)"
-          Write-Output "GITHUB_WORKSPACE: $env:GITHUB_WORKSPACE"
+          Write-Output "=== 当前目录文件 ==="
+          Get-ChildItem -Name
           Write-Output ""
-          Write-Output "=== 列出根目录文件 ==="
-          Get-ChildItem -Path "." -Name
-          Write-Output ""
-          Write-Output "=== 检查 static 目录 ==="
-          if (Test-Path "static") {
-            Write-Output "✓ static 目录存在"
-            Get-ChildItem -Path "static" -Name
-          } else {
-            Write-Output "✗ static 目录不存在！"
-            Write-Output "尝试查找 static:"
-            Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Recurse -Depth 2 -Name | Where-Object { $_ -like "*static*" }
+          if (-not (Test-Path "static")) {
+            New-Item -ItemType Directory -Path "static" | Out-Null
+            Write-Output "✓ 已创建 static 目录"
           }
+          # 将根目录的前端文件移入 static/
+          if (Test-Path "index.html") {
+            Copy-Item "index.html" "static\index.html"
+            Write-Output "✓ 已复制 index.html → static/"
+          }
+          if (Test-Path "three.min.js") {
+            Copy-Item "three.min.js" "static\three.min.js"
+            Write-Output "✓ 已复制 three.min.js → static/"
+          }
+          if (Test-Path "favicon.ico") {
+            Copy-Item "favicon.ico" "static\favicon.ico"
+            Write-Output "✓ 已复制 favicon.ico → static/"
+          }
+          Write-Output ""
+          Write-Output "=== static 目录内容 ==="
+          Get-ChildItem "static"
 
       - name: 🔨 打包成 .exe
         shell: pwsh
-        run: pyinstaller --onefile --windowed --name "光学衍射仿真" --icon "$env:GITHUB_WORKSPACE/static/favicon.ico" --add-data "$env:GITHUB_WORKSPACE/static;static/" --hidden-import numpy --hidden-import scipy.special --hidden-import PIL --collect-all flask --collect-all numpy --collect-all scipy --collect-all PIL "$env:GITHUB_WORKSPACE/diffraction_app.py"
+        run: pyinstaller --onefile --windowed --name "光学衍射仿真" --icon "static\favicon.ico" --add-data "static;static" --hidden-import numpy --hidden-import scipy.special --hidden-import PIL --collect-all flask --collect-all numpy --collect-all scipy --collect-all PIL diffraction_app.py
 
       - name: ✅ 验证打包结果
         shell: pwsh
@@ -84,6 +92,5 @@ jobs:
 
             ### 功能说明
             - 单缝、圆孔、圆屏、矩孔衍射
-            - 菲涅耳衍射 / 夫琅禾费衍射
-            - 3D 交互界面（Three.js）
-          files: dist/光学衍射仿真.exe
+            - 菲涅耳衍射 / 夫琅禾费衍射 / 3D 交互界面
+          files: dist\光学衍射仿真.exe
