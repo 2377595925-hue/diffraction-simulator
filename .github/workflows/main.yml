@@ -21,13 +21,33 @@ jobs:
           python-version: '3.11'
 
       - name: 📦 安装依赖
+        shell: pwsh
         run: |
           python -m pip install --upgrade pip
           pip install flask numpy scipy pillow pyinstaller
 
+      - name: 🔍 调试：查看文件结构
+        shell: pwsh
+        run: |
+          Write-Output "工作目录: $(Get-Location)"
+          Write-Output "GITHUB_WORKSPACE: $env:GITHUB_WORKSPACE"
+          Write-Output ""
+          Write-Output "=== 列出根目录文件 ==="
+          Get-ChildItem -Path "." -Name
+          Write-Output ""
+          Write-Output "=== 检查 static 目录 ==="
+          if (Test-Path "static") {
+            Write-Output "✓ static 目录存在"
+            Get-ChildItem -Path "static" -Name
+          } else {
+            Write-Output "✗ static 目录不存在！"
+            Write-Output "尝试查找 static:"
+            Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Recurse -Depth 2 -Name | Where-Object { $_ -like "*static*" }
+          }
+
       - name: 🔨 打包成 .exe
         shell: pwsh
-        run: pyinstaller --onefile --windowed --name "光学衍射仿真" --icon "static/favicon.ico" --add-data "static;static/" --hidden-import numpy --hidden-import scipy.special --hidden-import PIL --collect-all flask --collect-all numpy --collect-all scipy --collect-all PIL diffraction_app.py
+        run: pyinstaller --onefile --windowed --name "光学衍射仿真" --icon "$env:GITHUB_WORKSPACE/static/favicon.ico" --add-data "$env:GITHUB_WORKSPACE/static;static/" --hidden-import numpy --hidden-import scipy.special --hidden-import PIL --collect-all flask --collect-all numpy --collect-all scipy --collect-all PIL "$env:GITHUB_WORKSPACE/diffraction_app.py"
 
       - name: ✅ 验证打包结果
         shell: pwsh
