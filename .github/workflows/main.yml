@@ -26,54 +26,36 @@ jobs:
           python -m pip install --upgrade pip
           pip install flask numpy scipy pillow pyinstaller
 
-      - name: 📁 准备 static 目录（文件实际在根目录）
+      - name: 📁 准备 static 目录（前端文件实际在根目录）
         shell: pwsh
         run: |
-          Write-Output "=== 当前目录文件 ==="
-          Get-ChildItem -Name
-          Write-Output ""
-          if (-not (Test-Path "static")) {
-            New-Item -ItemType Directory -Path "static" | Out-Null
-            Write-Output "✓ 已创建 static 目录"
-          }
-          # 将根目录的前端文件移入 static/
-          if (Test-Path "index.html") {
-            Copy-Item "index.html" "static\index.html"
-            Write-Output "✓ 已复制 index.html → static/"
-          }
-          if (Test-Path "three.min.js") {
-            Copy-Item "three.min.js" "static\three.min.js"
-            Write-Output "✓ 已复制 three.min.js → static/"
-          }
-          if (Test-Path "favicon.ico") {
-            Copy-Item "favicon.ico" "static\favicon.ico"
-            Write-Output "✓ 已复制 favicon.ico → static/"
-          }
-          Write-Output ""
-          Write-Output "=== static 目录内容 ==="
+          if (-not (Test-Path "static")) { New-Item -ItemType Directory -Path "static" | Out-Null }
+          if (Test-Path "index.html")    { Copy-Item "index.html" "static\index.html" }
+          if (Test-Path "three.min.js") { Copy-Item "three.min.js" "static\three.min.js" }
+          Write-Output "static 目录内容:"
           Get-ChildItem "static"
 
       - name: 🔨 打包成 .exe
         shell: pwsh
-        run: pyinstaller --onefile --windowed --name "光学衍射仿真" --icon "static\favicon.ico" --add-data "static;static" --hidden-import numpy --hidden-import scipy.special --hidden-import PIL --collect-all flask --collect-all numpy --collect-all scipy --collect-all PIL diffraction_app.py
+        run: pyinstaller --onefile --windowed --name "光学衍射仿真" --add-data "static;static" --hidden-import numpy --hidden-import scipy.special --hidden-import PIL --collect-all flask --collect-all numpy --collect-all scipy --collect-all PIL diffraction_app.py
 
       - name: ✅ 验证打包结果
         shell: pwsh
         run: |
           if (-not (Test-Path "dist\光学衍射仿真.exe")) {
-            Write-Output "❌ 打包失败：未找到 dist\光学衍射仿真.exe"
+            Write-Output "❌ 打包失败"
             exit 1
           }
-          Write-Output "✓ 打包成功！文件大小:"
+          Write-Output "✓ 打包成功！大小:"
           Get-Item "dist\光学衍射仿真.exe" | Select-Object Length
 
-      - name: 📤 上传 .exe 到 Actions Artifacts
+      - name: 📤 上传 .exe
         uses: actions/upload-artifact@v4
         with:
           name: 光学衍射仿真-Windows版
-          path: dist/光学衍射仿真.exe
+          path: dist\光学衍射仿真.exe
 
-      - name: 🏷️ 创建 Release（仅在打 tag 时触发）
+      - name: 🏷️ 创建 Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
@@ -85,10 +67,6 @@ jobs:
             1. 下载下方 `光学衍射仿真.exe`
             2. 双击运行（无需安装 Python）
             3. 程序会自动打开浏览器 → http://127.0.0.1:8080
-
-            ### 系统要求
-            - Windows 10/11 (64位)
-            - 现代浏览器（Chrome/Edge 推荐）
 
             ### 功能说明
             - 单缝、圆孔、圆屏、矩孔衍射
